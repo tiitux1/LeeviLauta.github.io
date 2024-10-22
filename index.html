@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leevi Lauta</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Leevi Lauta</h1>
+        <button id="dbd-subscribe">Tilaa DBD</button>
+    </header>
+    
+    <div id="content">
+        <!-- Sivupalkki -->
+        <aside id="sidebar">
+            <h3>Genret</h3>
+            <ul>
+                <li><a href="#" onclick="filterThreads('uutiset')">Uutiset</a></li>
+                <li><a href="#" onclick="filterThreads('urheilu')">Urheilu</a></li>
+                <li><a href="#" onclick="filterThreads('pelit')">Pelit</a></li>
+                <li><a href="#" onclick="filterThreads('yleinen')">Yleinen</a></li>
+            </ul>
+        </aside>
+
+        <!-- Pääsisältö -->
+        <main>
+            <section id="create-thread">
+                <h2>Luo uusi lanka</h2>
+                <form id="new-thread-form">
+                    <label for="thread-genre">Valitse genre:</label>
+                    <select id="thread-genre">
+                        <option value="uutiset">Uutiset</option>
+                        <option value="urheilu">Urheilu</option>
+                        <option value="pelit">Pelit</option>
+                        <option value="yleinen">Yleinen</option>
+                    </select>
+                    
+                    <label for="thread-title">Langan otsikko:</label>
+                    <input type="text" id="thread-title" placeholder="Kirjoita otsikko..." required>
+                    
+                    <label for="thread-content">Sisältö:</label>
+                    <textarea id="thread-content" placeholder="Kirjoita sisältö..." required></textarea>
+                    
+                    <button type="submit">Luo lanka</button>
+                </form>
+            </section>
+
+            <section id="threads">
+                <h2>Lankasi</h2>
+                <div id="thread-list">
+                    <!-- Lankojen lista ilmestyy tähän -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
