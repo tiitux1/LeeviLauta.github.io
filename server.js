@@ -1,28 +1,25 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
+const socketIo = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 
-// Tallennetaan luodut keskustelulangat palvelimen muistiin
+app.use(express.static(__dirname + '/public'));
+
 let threads = [];
 
-// Palvellaan staattiset tiedostot
-app.use(express.static('public'));
-
-// Kun uusi asiakas liittyy
 io.on('connection', (socket) => {
     console.log('Käyttäjä liittyi');
 
-    // Lähetetään kaikki langat uudelle käyttäjälle
+    // Lähetetään kaikki olemassa olevat langat uudelle käyttäjälle
     socket.emit('load threads', threads);
 
     // Uuden langan luonti
     socket.on('create thread', (threadData) => {
         const newThread = {
-            id: threads.length, // Luodaan yksilöllinen id
+            id: Date.now(), // Luodaan yksilöllinen id aikaleimasta
             title: threadData.title,
             genre: threadData.genre,
             messages: [] // Viestit tallennetaan tähän lankaan
@@ -41,8 +38,6 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = 3000;
-
-server.listen(PORT, () => {
-    console.log(`Palvelin käynnissä osoitteessa http://localhost:${PORT}`);
-});
+// Portti ja palvelimen käynnistys
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, '0.0.0.0', () => console.log(`Palvelin käynnissä portissa ${PORT}`));

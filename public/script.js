@@ -1,6 +1,5 @@
 const socket = io();
 
-// Tallennetaan kaikki langat ja valittu lanka
 let threads = [];
 let selectedThreadId = null;
 
@@ -19,41 +18,49 @@ function createThread() {
 // Kun uusi lanka luodaan
 socket.on('new thread', (thread) => {
     threads.push(thread);
-    displayThreads();
+    displayThreads(); // Päivitetään lankalistaus uusilla tiedoilla
 });
 
-// Näytetään langat
-function displayThreads() {
+// Näytetään kaikki tai genren mukaiset langat
+function displayThreads(genre = 'kaikki') {
     const threadList = document.getElementById('thread-list');
-    threadList.innerHTML = ''; // Tyhjennetään aiempi lista
+    threadList.innerHTML = ''; // Tyhjennetään lankalistaus
+
     threads.forEach(thread => {
-        const div = document.createElement('div');
-        div.className = 'thread';
-        div.textContent = `${thread.title} (${thread.genre})`;
-        div.onclick = () => selectThread(thread.id);
-        threadList.appendChild(div);
+        if (genre === 'kaikki' || thread.genre === genre) {
+            const div = document.createElement('div');
+            div.className = 'thread';
+            div.textContent = `${thread.title} (${thread.genre})`;
+            div.onclick = () => selectThread(thread.id);
+            threadList.appendChild(div);
+        }
     });
+}
+
+// Suodatetaan langat genrekohtaisesti
+function filterThreads(genre) {
+    displayThreads(genre); // Näytetään vain valitun genren langat
 }
 
 // Kun palvelin lähettää kaikki langat yhdistäessä
 socket.on('load threads', (serverThreads) => {
     threads = serverThreads;
-    displayThreads();
+    displayThreads(); // Näytetään kaikki langat aluksi
 });
 
 // Valitaan tietty lanka ja näytetään sen viestit
 function selectThread(threadId) {
     selectedThreadId = threadId;
     const thread = threads.find(t => t.id === threadId);
-    document.getElementById('chat-container').style.display = 'block';
     document.getElementById('thread-title-display').textContent = thread.title;
+    document.getElementById('chat-container').style.display = 'block';
     displayMessages(thread.messages);
 }
 
-// Viestien näyttäminen valitussa langassa
+// Näytetään viestit valitussa langassa
 function displayMessages(messages) {
     const messageList = document.getElementById('messages');
-    messageList.innerHTML = '';
+    messageList.innerHTML = ''; // Tyhjennetään aiemmat viestit
     messages.forEach(message => {
         const li = document.createElement('li');
         li.textContent = message;
@@ -62,29 +69,22 @@ function displayMessages(messages) {
 }
 
 // Lähetetään viesti valittuun lankaan
-document.getElementById('message-form').addEventListener('submit', function(e) {
+document.getElementById('message-form').onsubmit = (e) => {
     e.preventDefault();
-    const input = document.getElementById('message-input');
-    if (input.value && selectedThreadId !== null) {
-        socket.emit('send message', { threadId: selectedThreadId, message: input.value });
-        input.value = ''; // Tyhjennetään syötekenttä
-    } else {
-        alert("Kirjoita viesti ennen lähettämistä.");
+    const messageInput = document.getElementById('message-input');
+    const message = messageInput.value;
+    if (message && selectedThreadId) {
+        socket.emit('send message', { threadId: selectedThreadId, message });
+        messageInput.value = '';
     }
-});
+};
 
-// Vastaanotetaan uusi viesti ja näytetään se
+// Kun uusi viesti lähetetään palvelimen toimesta
 socket.on('new message', ({ threadId, message }) => {
-    const thread = threads.find(t => t.id === threadId);
-    if (thread) {
-        thread.messages.push(message);
-        if (threadId === selectedThreadId) {
-            displayMessages(thread.messages);
-        }
+    if (selectedThreadId === threadId) {
+        const messageList = document.getElementById('messages');
+        const li = document.createElement('li');
+        li.textContent = message;
+        messageList.appendChild(li);
     }
-});
-
-// Kun yhteys muodostetaan, ladataan langat
-socket.on('connect', () => {
-    socket.emit('request threads'); // Lähetetään pyyntö langoista heti, kun yhteys muodostetaan
 });

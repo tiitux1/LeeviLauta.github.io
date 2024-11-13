@@ -120,7 +120,6 @@ input[type="text"], textarea, select {
 
 /* Viestiketjun chat-kontaineri */
 #chat-container {
-    display: none; /* Näytetään vain valitun langan kohdalla */
     background-color: #fff;
     padding: 20px;
     border-radius: 5px;
@@ -137,7 +136,7 @@ input[type="text"], textarea, select {
     padding: 0;
     margin-bottom: 20px;
     max-height: 300px;
-    overflow-y: auto; /* Vierityspalkki pitkiä keskusteluja varten */
+    overflow-y: auto;
 }
 
 #messages li {
@@ -167,17 +166,4 @@ input[type="text"], textarea, select {
 
 #message-form button:hover {
     background-color: #2980b9;
-}
-
-/* Vastaukset */
-.replies {
-    margin-top: 10px;
-    padding-left: 20px;
-}
-
-.reply {
-    background-color: #f9f9f9;
-    padding: 10px;
-    border-radius: 3px;
-    margin-bottom: 10px;
 }
