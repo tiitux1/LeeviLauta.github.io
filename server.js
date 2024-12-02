@@ -1,69 +1,99 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const mongoose = require('mongoose');
 
+// Express-sovelluksen ja palvelimen luonti
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+// MongoDB Atlas -yhteyden parametrit
+const username = encodeURIComponent("bajida3789");
+const password = encodeURIComponent("283IZOaFk1WTZKL2");
+const cluster = "cluster0.5vf8o.mongodb.net";
+const database = "leevilauta"; // Tietokannan nimi
+const uri = `mongodb+srv://${username}:${password}@${cluster}/?retryWrites=true&w=majority&appName=Cluster0`;
+
+// Mongoose-yhteys
+mongoose
+  .connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log('MongoDB-yhteys onnistui'))
+  .catch((err) => {
+    console.error('MongoDB-yhteys epäonnistui:', err.message);
+    process.exit(1); // Lopetetaan sovellus, jos yhteys ei toimi
+  });
+
+// Mongoose-skeema ja -malli langoille
+const threadSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  genre: { type: String, required: true },
+  messages: [
+    {
+      content: { type: String, required: true },
+      timestamp: { type: Date, default: Date.now },
+    },
+  ],
+});
+
+const Thread = mongoose.model('Thread', threadSchema);
+
+// Palvellaan staattiset tiedostot "public"-kansiosta
 app.use(express.static(__dirname + '/public'));
 
-let threads = [];
-
+// Socket.IO-tapahtumien käsittely
 io.on('connection', (socket) => {
-    console.log('Käyttäjä liittyi');
+  console.log('Käyttäjä liittyi');
 
-    // Lähetetään kaikki olemassa olevat langat uudelle käyttäjälle
-    socket.emit('load threads', threads);
-
-    // Uuden langan luonti
-    socket.on('create thread', (threadData) => {
-        const newThread = {
-            id: Date.now(), // Luodaan yksilöllinen id aikaleimasta
-            title: threadData.title,
-            genre: threadData.genre,
-            messages: [] // Viestit tallennetaan tähän lankaan
-        };
-        threads.push(newThread);
-        io.emit('new thread', newThread); // Lähetetään uusi lanka kaikille
+  // Kaikkien lankojen lataus tietokannasta
+  Thread.find()
+    .then((threads) => {
+      socket.emit('load threads', threads);
+    })
+    .catch((err) => {
+      console.error('Virhe haettaessa lankoja:', err);
     });
 
-    // Viestin lähetys tiettyyn lankaan
-    socket.on('send message', ({ threadId, message }) => {
-        const thread = threads.find(t => t.id === threadId);
-        if (thread) {
-            thread.messages.push(message);
-            io.emit('new message', { threadId, message });
-        }
-    });
-    
+  // Uuden langan luonti
+  socket.on('create thread', async (threadData) => {
+    try {
+      const newThread = new Thread({
+        title: threadData.title,
+        genre: threadData.genre,
+        messages: [],
+      });
+      await newThread.save();
+      io.emit('new thread', newThread); // Lähetetään uusi lanka kaikille
+    } catch (err) {
+      console.error('Virhe luodessa uutta lankaa:', err);
+    }
+  });
+
+  // Uuden viestin lähetys lankaan
+  socket.on('send message', async ({ threadId, message }) => {
+    try {
+      const thread = await Thread.findById(threadId);
+      if (thread) {
+        const newMessage = { content: message };
+        thread.messages.push(newMessage);
+        await thread.save();
+        io.emit('new message', { threadId, message: newMessage }); // Lähetetään viesti kaikille
+      }
+    } catch (err) {
+      console.error('Virhe lisättäessä viestiä lankaan:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Käyttäjä poistui');
+  });
 });
 
-// Portti ja palvelimen käynnistys
+// Palvelimen käynnistys
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => console.log(`Palvelin käynnissä portissa ${PORT}`));
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = "mongodb+srv://Tiitux:<Toimimiseen22>@cluster0.dpyyk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
-async function run() {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
-  }
-}
-run().catch(console.dir);
-
-
+server.listen(PORT, () =>
+  console.log(`Palvelin käynnissä portissa ${PORT}`)
+);
